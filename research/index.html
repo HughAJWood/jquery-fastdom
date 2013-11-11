@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Library Research Playground</title>
+  <style>
+	html, body, div, span, applet, object, iframe,
+	h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+	a, abbr, acronym, address, big, cite, code,
+	del, dfn, em, font, img, ins, kbd, q, s, samp,
+	small, strike, strong, sub, sup, tt, var,
+	dl, dt, dd, li,
+	fieldset, form, label, legend,
+	table, caption, tbody, tfoot, thead, tr, th, td {
+		margin:0;
+		padding:0;
+		border:0;
+		outline:0;
+		font-weight:inherit;
+		font-style:inherit;
+		font-size:100%;
+		font-family:inherit;
+		background-color:transparent;
+		background-repeat:no-repeat;
+		background-position:top left;
+	}
+	.container div {
+		display:block;
+		border:1px solid #eee;
+		background-color:#ddd;
+		padding:10px;
+		margin:10px;
+	}
+	.tab {
+		width:25px;
+		height:5px;
+		float:left;
+	}
+	.highlight {
+		font-weight:bold;
+		background-color:#fdd;
+	}
+	#funcJump {
+		display:none;
+	}
+	#ribbon {
+		margin:0;
+		padding:0;
+		position:fixed;
+		bottom:0px;
+		width:100%;
+		background-color:#eef;
+	}
+	#ribbonContent {
+		padding:10px;
+	}
+	h1 {
+		display:inline;
+		margin-right:10px;
+	}
+	#libCheck {
+		color:#f00;
+	}
+  </style>
+</head>
+<body>
+	<div id="ribbon">
+		<div id="ribbonContent">
+			<h1>DOM Invalidating search for JQuery</h1>
+			<select onchange="javascript:if(typeof this.value == 'undefined')return; libraryChange(this.value);">
+				<option>- Select a library -</option>
+				<option value="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js">JQuery 1.8.3</option>
+				<option value="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.js">JQuery 1.9.0</option>
+				<option value="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.js">JQuery 1.10.2</option>
+				<option value="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.js">JQuery 2.0.2</option>
+			</select>
+			<select id="funcJump" onchange="javascript:document.location.href = '#' + this.value;">
+				<option>- All functions -</option>
+			</select>
+			<div id="libCheck">No library loaded</div>
+		</div>
+	</div>
+	<div id="testOutput"></div>
+	<script type="text/javascript">
+		// I just need a fast way of getting through the jQuery functions
+		var libraryLoaded = false;
+		var libCheck = document.getElementById("libCheck");
+		var testOutput = document.getElementById("testOutput");
+		var funcJump = document.getElementById("funcJump");
+		
+		// Source:http://kellegous.com/j/2013/01/26/layout-performance/
+		var domInvalidatorKeywords =
+			[
+				// Element
+				"clientHeight",
+				"clientLeft",
+				"clientTop",
+				"clientWidth",
+				"focus",
+				"getBoundingClientRect",
+				"getClientRects",
+				"innerText",
+				"offsetHeight",
+				"offsetLeft",
+				"offsetParent",
+				"offsetTop",
+				"offsetWidth",
+				"outerText",
+				"scrollByLines",
+				"scrollByPages",
+				"scrollHeight",
+				"scrollIntoView",
+				"scrollIntoViewIfNeeded",
+				"scrollLeft",
+				"scrollTop",
+				"scrollWidth",
+				
+				// MouseEvent
+				"layerX",
+				"layerY",
+				"offsetX",
+				"offsetY",
+				
+				// Window
+				"getComputedStyle",
+				"scrollBy",
+				"scrollTo",
+				"scrollX",
+				"scrollY",
+				
+				// Frame, Document & Image
+				"height",
+				"width"
+			];
+				
+		var invalidCounts = {};
+		
+		function getLibrary(uri) {			
+			var libraryToLoad = document.createElement('script');
+			libraryToLoad.setAttribute("type","text/javascript");
+			libraryToLoad.setAttribute("src", uri);
+			var body = document.getElementsByTagName("body")[0]; 
+			body.appendChild(libraryToLoad);
+		}
+		
+		function libraryChange(uri) {
+			// Cleanup old jquery
+			libraryLoaded = false;
+			if(typeof window.jQuery == 'undefined') delete window.jQuery;
+			if(typeof window.$ == 'undefined') delete window.$;
+			libCheck.innerHTML = "jQuery loading from:" + uri;
+			getLibrary(uri);
+		}
+		
+		function testLibrary() {
+			// Empty area
+			while(testOutput.firstChild){
+				testOutput.removeChild(testOutput.firstChild);
+			}
+			for(var i = funcJump.options.length-1; i >= 0 ;i--)
+			{
+				funcJump.remove(i);
+			}
+			
+			var container = document.createElement("div");
+			container.className = "container";
+			
+			for (var key in window.jQuery.fn) {
+				var funcText = "" + window.jQuery.fn[key];
+				
+				var count = 0;
+				// Check for invalid keywords
+				domInvalidatorKeywords.forEach(function(value){
+					var reg = new RegExp(value,"gi");
+					var results = funcText.match(reg); 
+					if(results != null) count += results.length-1;
+					funcText = funcText.replace(reg, '<span class="highlight">' + value + '</span>');
+				});
+				
+								
+				if(count > 0) {
+					var code = document.createElement("div");
+					var funcDIV = document.createElement("div");
+					var opt = document.createElement('option');
+					
+					opt.innerHTML = key;
+					opt.value = key;
+					funcJump.appendChild(opt);
+					funcJump.style.display = "inline";
+					
+					funcDIV.id = key;
+					
+					funcText = funcText.replace(/\n/g, '<br>').replace(/\t/g, '<span class="tab"></span>');
+					funcText + + funcText
+					code.innerHTML = funcText;
+					funcDIV.innerHTML += key;
+					funcDIV.appendChild(code);
+					container.appendChild(funcDIV);
+					testOutput.appendChild(container);
+				}
+			}
+		}
+		
+		(function loopCheck(){
+		   setTimeout(function(){
+			console.log(typeof window.jQuery);
+		   		if(typeof window.jQuery != 'undefined' && libraryLoaded == false) {
+					libraryLoaded = true;
+					libCheck.innerHTML = "jQuery" + $.fn.jquery + " loaded";
+					testLibrary();
+				}
+				loopCheck();
+		   }, 1000);
+		})();
+	</script>
+</body>
+</html>
